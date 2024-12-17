@@ -1,16 +1,20 @@
 (comment) @comment
 
+"assert" @keyword.control.exception
+"or" @keyword.operator
+"rec" @keyword.control.repeat
+
 [
   "if" 
   "then"
   "else"
+] @keyword.control.conditional
+
+[
   "let"
   "inherit"
   "in"
-  "rec"
   "with" 
-  "assert"
-  "or"
 ] @keyword
 
 ((identifier) @variable.builtin
@@ -42,14 +46,13 @@
 (integer_expression) @constant.numeric.integer
 (float_expression) @constant.numeric.float
 
-(interpolation
-  "${" @punctuation.special
-  "}" @punctuation.special) @embedded
-
 (escape_sequence) @constant.character.escape
+(dollar_escape) @constant.character.escape
 
 (function_expression
+  "@"? @punctuation.delimiter
   universal: (identifier) @variable.parameter
+  "@"? @punctuation.delimiter
 )
 
 (formal
@@ -57,11 +60,15 @@
   "?"? @punctuation.delimiter)
 
 (select_expression
-  attrpath: (attrpath (identifier)) @variable.other.member)
+  attrpath: (attrpath attr: (identifier)) @variable.other.member)
+
+(interpolation
+  "${" @punctuation.special
+  "}" @punctuation.special) @embedded
 
 (apply_expression
   function: [
-    (variable_expression (identifier)) @function
+    (variable_expression name: (identifier) @function)
     (select_expression
       attrpath: (attrpath
         attr: (identifier) @function .))])
@@ -72,20 +79,27 @@
 (binary_expression
   operator: _ @operator)
 
-(variable_expression (identifier) @variable)
+(variable_expression name: (identifier) @variable)
 
 (binding
-  attrpath: (attrpath (identifier)) @variable.other.member)
+  attrpath: (attrpath attr: (identifier)) @variable.other.member)
 
-(identifier) @variable.other.member
+(inherit_from attrs: (inherited_attrs attr: (identifier) @variable.other.member))
+(inherited_attrs attr: (identifier) @variable)
 
-(inherit_from attrs: (inherited_attrs attr: (identifier) @variable.other.member) )
+(has_attr_expression
+  expression: (_)
+  "?" @operator
+  attrpath: (attrpath
+    attr: (identifier) @variable.other.member))
 
 [
   ";"
   "."
   ","
   "="
+  ":"
+  (ellipses)
 ] @punctuation.delimiter
 
 [

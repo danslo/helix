@@ -1,22 +1,3 @@
-[
-  (array)
-  (object)
-  (arguments)
-  (formal_parameters)
+; See runtime/queries/ecma/README.md for more info.
 
-  (statement_block)
-  (object_pattern)
-  (class_body)
-  (named_imports)
-
-  (binary_expression)
-  (return_statement)
-  (template_substitution)
-  (export_clause)
-] @indent
-
-[
-  "}"
-  "]"
-  ")"
-] @outdent
+; inherits: _javascript,ecma

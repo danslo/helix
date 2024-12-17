@@ -1,7 +1,3 @@
-; inherits: javascript
+; See runtime/queries/ecma/README.md for more info.
 
-[
-  (enum_declaration) 
-  (interface_declaration)
-  (object_type)
-] @indent
+; inherits: _typescript,ecma

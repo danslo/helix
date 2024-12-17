@@ -1,5 +1,6 @@
 use anyhow::Result;
 use helix_core::Position;
+use helix_view::tree::Layout;
 use std::path::{Path, PathBuf};
 
 #[derive(Default)]
@@ -11,14 +12,19 @@ pub struct Args {
     pub load_tutor: bool,
     pub fetch_grammars: bool,
     pub build_grammars: bool,
+    pub split: Option<Layout>,
     pub verbosity: u64,
+    pub log_file: Option<PathBuf>,
+    pub config_file: Option<PathBuf>,
     pub files: Vec<(PathBuf, Position)>,
+    pub working_directory: Option<PathBuf>,
 }
 
 impl Args {
     pub fn parse_args() -> Result<Args> {
         let mut args = Args::default();
         let mut argv = std::env::args().peekable();
+        let mut line_number = 0;
 
         argv.next(); // skip the program, we don't care about that
 
@@ -28,6 +34,14 @@ impl Args {
                 "--version" => args.display_version = true,
                 "--help" => args.display_help = true,
                 "--tutor" => args.load_tutor = true,
+                "--vsplit" => match args.split {
+                    Some(_) => anyhow::bail!("can only set a split once of a specific type"),
+                    None => args.split = Some(Layout::Vertical),
+                },
+                "--hsplit" => match args.split {
+                    Some(_) => anyhow::bail!("can only set a split once of a specific type"),
+                    None => args.split = Some(Layout::Horizontal),
+                },
                 "--health" => {
                     args.health = true;
                     args.health_arg = argv.next_if(|opt| !opt.starts_with('-'));
@@ -37,6 +51,28 @@ impl Args {
                     Some("build") => args.build_grammars = true,
                     _ => {
                         anyhow::bail!("--grammar must be followed by either 'fetch' or 'build'")
+                    }
+                },
+                "-c" | "--config" => match argv.next().as_deref() {
+                    Some(path) => args.config_file = Some(path.into()),
+                    None => anyhow::bail!("--config must specify a path to read"),
+                },
+                "--log" => match argv.next().as_deref() {
+                    Some(path) => args.log_file = Some(path.into()),
+                    None => anyhow::bail!("--log must specify a path to write"),
+                },
+                "-w" | "--working-dir" => match argv.next().as_deref() {
+                    Some(path) => {
+                        args.working_directory = if Path::new(path).is_dir() {
+                            Some(PathBuf::from(path))
+                        } else {
+                            anyhow::bail!(
+                                "--working-dir specified does not exist or is not a directory"
+                            )
+                        }
+                    }
+                    None => {
+                        anyhow::bail!("--working-dir must specify an initial working directory")
                     }
                 },
                 arg if arg.starts_with("--") => {
@@ -53,6 +89,12 @@ impl Args {
                         }
                     }
                 }
+                arg if arg.starts_with('+') => {
+                    match arg[1..].parse::<usize>() {
+                        Ok(n) => line_number = n.saturating_sub(1),
+                        _ => args.files.push(parse_file(arg)),
+                    };
+                }
                 arg => args.files.push(parse_file(arg)),
             }
         }
@@ -60,6 +102,12 @@ impl Args {
         // push the remaining args, if any to the files
         for arg in argv {
             args.files.push(parse_file(&arg));
+        }
+
+        if let Some(file) = args.files.first_mut() {
+            if line_number != 0 {
+                file.1.row = line_number;
+            }
         }
 
         Ok(args)
